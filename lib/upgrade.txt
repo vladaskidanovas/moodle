@@ -12,6 +12,7 @@ information provided here is intended especially for developers.
 
 === 4.1 ===
 
+*   Added sectionsvisibility field to the course table (MDL-76040)
 * HTMLPurifier has been upgraded to the latest version - 4.16.0
 * A process to deprecate capabilities by flagging them in the access.php by adding a $deprecatedcapabilities variable (an array).
   This array will list the deprecated capabilities and a possible replacement. Once we declare the capability as deprecated, a debugging

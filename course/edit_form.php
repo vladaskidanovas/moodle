@@ -290,6 +290,16 @@ class course_edit_form extends moodleform {
         $mform->addHelpButton('showactivitydates', 'showactivitydates');
         $mform->setDefault('showactivitydates', $courseconfig->showactivitydates);
 
+        // Sections visibility options.
+        $choices = array();
+        $choices[0] = get_string('expandall');
+        $choices[1] = get_string('sectionsvisibility:expandfirst');
+        $choices[2] = get_string('collapseall');
+        $mform->addElement('select', 'sectionsvisibility', get_string('sectionsvisibility'), $choices);
+        $mform->addHelpButton('sectionsvisibility', 'sectionsvisibility');
+        $mform->setType('sectionvisibility', PARAM_INT);
+        $mform->setDefault('sectionsvisibility', $courseconfig->sectionsvisibility);
+
         // Files and uploads.
         $mform->addElement('header', 'filehdr', get_string('filesanduploads'));
 

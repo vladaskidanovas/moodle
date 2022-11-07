@@ -132,6 +132,22 @@ class content implements named_templatable, renderable {
         $course = $format->get_course();
         $modinfo = $this->format->get_modinfo();
 
+        // Check if the user has no preference for "contentcollapsed" and the course format is set to topic/weeks.
+        if (preg_match('(topics|weeks)', $format->get_format()) &&
+            !array_key_exists('contentcollapsed', $format->get_sections_preferences_by_preference())) {
+            $sectionsids = [];
+            if ((int)$course->sectionsvisibility > 0) {
+                $sectionlist = $this->get_sections_to_display($modinfo);
+                $sectionsids = array_column($sectionlist, 'id');
+                if ((int)$course->sectionsvisibility === 1) {
+                    // Remove first section id from the list.
+                    array_shift($sectionsids);
+                }
+            }
+            // Set users section content preference.
+            $format->set_sections_preference('contentcollapsed', $sectionsids);
+        }
+
         // Generate section list.
         $sections = [];
         $stealthsections = [];

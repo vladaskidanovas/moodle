@@ -611,6 +611,7 @@ class core_course_external extends external_api {
             $courseinfo['enddate'] = $course->enddate;
             $courseinfo['showactivitydates'] = $course->showactivitydates;
             $courseinfo['showcompletionconditions'] = $course->showcompletionconditions;
+            $courseinfo['sectionsvisibility'] = $course->sectionsvisibility;
             if (array_key_exists('numsections', $courseformatoptions)) {
                 // For backward-compartibility
                 $courseinfo['numsections'] = $courseformatoptions['numsections'];
@@ -745,6 +746,7 @@ class core_course_external extends external_api {
                             'showactivitydates' => new external_value(PARAM_BOOL, 'Whether the activity dates are shown or not'),
                             'showcompletionconditions' => new external_value(PARAM_BOOL,
                                 'Whether the activity completion conditions are shown or not'),
+                            'sectionsvisibility' => new external_value(PARAM_INT, 'Default course section visibility setting'),
                             'customfields' => new external_multiple_structure(
                                 new external_single_structure(
                                     ['name' => new external_value(PARAM_RAW, 'The name of the custom field'),
@@ -2500,6 +2502,7 @@ class core_course_external extends external_api {
         $coursereturns['sortorder']         = $course->sortorder;
         $coursereturns['showactivitydates'] = $course->showactivitydates;
         $coursereturns['showcompletionconditions'] = $course->showcompletionconditions;
+        $coursereturns['sectionsvisibility'] = $course->sectionsvisibility;
 
         $handler = core_course\customfield\course_handler::create();
         if ($customfields = $handler->export_instance_data($course->id)) {
@@ -2642,6 +2645,7 @@ class core_course_external extends external_api {
             'showactivitydates' => new external_value(PARAM_BOOL, 'Whether the activity dates are shown or not'),
             'showcompletionconditions' => new external_value(PARAM_BOOL,
                 'Whether the activity completion conditions are shown or not'),
+            'sectionsvisibility' => new external_value(PARAM_INT, 'Default course section visibility setting'),
             'contacts' => new external_multiple_structure(
                 new external_single_structure(
                     array(

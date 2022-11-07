@@ -3037,6 +3037,21 @@ privatefiles,moodle|/user/files.php';
         upgrade_main_savepoint(true, 2022110600.00);
     }
 
+    if ($oldversion < 2022110800.01) {
+        // Define field 'sectionsvisibility' to be added to course table.
+        $table = new xmldb_table('course');
+        $field = new xmldb_field('sectionsvisibility', XMLDB_TYPE_INTEGER, '1', null,
+                                 XMLDB_NOTNULL, null, '0', 'showcompletionconditions');
+
+        // Conditionally launch add field sectionsvisibility.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022110800.01);
+    }
+
     // Automatically generated Moodle v4.1.0 release upgrade line.
     // Put any upgrade step following this.
 

@@ -155,6 +155,14 @@ if ($hassiteconfig or has_any_capability($capabilities, $systemcontext)) {
             1 => new lang_string('yes')
         ]
     ));
+    $temp->add(new admin_setting_configselect('moodlecourse/sectionsvisibility',
+        new lang_string('sectionsvisibility'),
+        new lang_string('sectionsvisibility_help'), 0, [
+        0 => new lang_string('expandall'),
+        1 => new lang_string('sectionsvisibility:expandfirst'),
+        2 => new lang_string('collapseall')
+        ]
+    ));
 
     // Files and uploads.
     $temp->add(new admin_setting_heading('filesanduploadshdr', new lang_string('filesanduploads'), ''));
