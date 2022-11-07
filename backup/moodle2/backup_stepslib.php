@@ -460,6 +460,7 @@ class backup_course_structure_step extends backup_structure_step {
             'requested',
             'showactivitydates',
             'showcompletionconditions',
+            'sectionsvisibility',
             'enablecompletion', 'completionstartonenrol', 'completionnotify'));
 
         $category = new backup_nested_element('category', array('id'), array(

@@ -4706,7 +4706,7 @@ function course_get_recent_courses(int $userid = null, int $limit = 0, int $offs
     $basefields = [
         'id', 'idnumber', 'summary', 'summaryformat', 'startdate', 'enddate', 'category',
         'shortname', 'fullname', 'timeaccess', 'component', 'visible',
-        'showactivitydates', 'showcompletionconditions',
+        'showactivitydates', 'showcompletionconditions', 'sectionsvisibility',
     ];
 
     if (empty($sort)) {

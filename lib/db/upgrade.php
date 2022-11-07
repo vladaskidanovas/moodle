@@ -4547,5 +4547,20 @@ privatefiles,moodle|/user/files.php';
         upgrade_main_savepoint(true, 2022041904.03);
     }
 
+    if ($oldversion < 2022041904.14) {
+        // Define field 'sectionsvisibility' to be added to course table.
+        $table = new xmldb_table('course');
+        $field = new xmldb_field('sectionsvisibility', XMLDB_TYPE_INTEGER, '1', null,
+                                 XMLDB_NOTNULL, null, '0', 'showcompletionconditions');
+
+        // Conditionally launch add field sectionsvisibility.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022041904.14);
+    }
+
     return true;
 }
