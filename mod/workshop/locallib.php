@@ -194,6 +194,9 @@ class workshop {
      */
     protected $initialbarprefs = [];
 
+    /** @var array stores capabilities SQL and parameters */
+    private $capabilitysqlcache = [];
+
     /**
      * Initializes the workshop API instance using the data from DB
      *
@@ -3461,10 +3464,16 @@ class workshop {
      * @return array of (string)sql, (array)params
      */
     protected function get_users_with_capability_sql($capability, $musthavesubmission, $groupid) {
-        global $CFG;
+        global $DB, $CFG;
         /** @var int static counter used to generate unique parameter holders */
         static $inc = 0;
         $inc++;
+
+        // Use cached capabilities, SQL, and parameters if they are already available.
+        $key = "$capability-$musthavesubmission-$groupid";
+        if (isset($this->capabilitysqlcache[$key])) {
+            return $this->capabilitysqlcache[$key];
+        }
 
         // If the caller requests all groups and we are using a selected grouping,
         // recursively call this function for each group in the grouping (this is
@@ -3477,11 +3486,19 @@ class workshop {
             foreach ($groupinggroupids as $groupinggroupid) {
                 if ($groupinggroupid > 0) { // just in case in order not to fall into the endless loop
                     list($gsql, $gparams) = $this->get_users_with_capability_sql($capability, $musthavesubmission, $groupinggroupid);
-                    $sql[] = $gsql;
-                    $params = array_merge($params, $gparams);
+                    // Get record sql to avoid complex union query.
+                    $users = $DB->get_records_sql($gsql, $gparams);
+                    $params = array_merge($params, array_keys($users));
                 }
             }
-            $sql = implode(PHP_EOL." UNION ".PHP_EOL, $sql);
+            // Removes duplicates using the array unique.
+            [$useridssql, $params] = $DB->get_in_or_equal(array_unique($params), SQL_PARAMS_NAMED);
+            // Get user field API.
+            $userfieldsapi = \core_user\fields::for_userpic();
+            $userfields = $userfieldsapi->get_sql('u', false, '', '', false)->selects;
+            $sql = "SELECT $userfields FROM {user} as u WHERE id $useridssql";
+            // Cache the sql and params.
+            $this->capabilitysqlcache[$key] = [$sql, $params];
             return array($sql, $params);
         }
 
