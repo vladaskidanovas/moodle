@@ -16,8 +16,8 @@
 
 namespace core_contentbank\output;
 
-use context_course;
-use context_coursecat;
+use core\context\{course, coursecat};
+use core\context_helper;
 use core_contentbank\content;
 use core_contentbank\contentbank;
 use renderable;
@@ -122,6 +122,8 @@ class bankcontent implements renderable, templatable {
             $method = 'export_tool_'.$tool['action'];
             if (method_exists($this, $method)) {
                 $this->$method($tool);
+            } else {
+                $this->export_tool_default($tool);
             }
             $data->tools[] = $tool;
         }
@@ -133,8 +135,9 @@ class bankcontent implements renderable, templatable {
         }
         $options = [];
         foreach ($this->allowedcategories as $allowedcategory) {
+            context_helper::preload_from_record(clone $allowedcategory);
             $options[$allowedcategory->ctxid] = format_string($allowedcategory->name, true, [
-                'context' => context_coursecat::instance($allowedcategory->ctxinstance),
+                'context' => coursecat::instance($allowedcategory->ctxinstance),
             ]);
         }
         if (!empty($options)) {
@@ -144,8 +147,9 @@ class bankcontent implements renderable, templatable {
         foreach ($this->allowedcourses as $allowedcourse) {
             // Don't add the frontpage course to the list.
             if ($allowedcourse->id != $SITE->id) {
+                context_helper::preload_from_record(clone $allowedcourse);
                 $options[$allowedcourse->ctxid] = format_string($allowedcourse->fullname, true, [
-                    'context' => context_course::instance($allowedcourse->ctxinstance),
+                    'context' => course::instance($allowedcourse->ctxinstance),
                 ]);
             }
         }
@@ -206,5 +210,18 @@ class bankcontent implements renderable, templatable {
         }
 
         $tool['contenttypes'] = $addoptions;
+    }
+
+    /**
+     * This is the default output of a tool.
+     * It will be displayed as a button by default.
+     *
+     * @param array $tool Data for rendering the Add dropdown, including the editable content types.
+     * @return void
+     */
+    private function export_tool_default(array &$tool): void {
+        if (empty($tool['checkbox']) && empty($tool['dropdown'])) {
+            $tool['button'] = true;
+        }
     }
 }

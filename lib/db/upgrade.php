@@ -1178,5 +1178,67 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2024070500.01);
     }
 
+    if ($oldversion < 2024071900.01) {
+        // Define table stored_progress to be created.
+        $table = new xmldb_table('stored_progress');
+
+        // Adding fields to table stored_progress.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('idnumber', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timestart', XMLDB_TYPE_INTEGER, '20', null, null, null, null);
+        $table->add_field('lastupdate', XMLDB_TYPE_INTEGER, '20', null, null, null, null);
+        $table->add_field('percentcompleted', XMLDB_TYPE_NUMBER, '5, 2', null, null, null, '0');
+        $table->add_field('message', XMLDB_TYPE_CHAR, '255', null, null, null, null);
+        $table->add_field('haserrored', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table stored_progress.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Adding indexes to table stored_progress.
+        $table->add_index('uid_index', XMLDB_INDEX_NOTUNIQUE, ['idnumber']);
+
+        // Conditionally launch create table for stored_progress.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024071900.01);
+    }
+
+    if ($oldversion < 2024072600.01) {
+        // If tool_innodb is no longer present, remove it.
+        if (!file_exists($CFG->dirroot . '/admin/tool/innodb/version.php')) {
+            // Delete tool_innodb.
+            uninstall_plugin('tool', 'innodb');
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024072600.01);
+    }
+
+    if ($oldversion < 2024080500.00) {
+
+        // Fix missing default admin presets "sensible settings" (those that should be treated as sensitive).
+        $newsensiblesettings = [
+            'bigbluebuttonbn_shared_secret@@none',
+            'apikey@@tiny_premium',
+            'matrixaccesstoken@@communication_matrix',
+            'api_secret@@factor_sms',
+        ];
+
+        $sensiblesettings = get_config('adminpresets', 'sensiblesettings');
+        foreach ($newsensiblesettings as $newsensiblesetting) {
+            if (strpos($sensiblesettings, $newsensiblesetting) === false) {
+                $sensiblesettings .= ", {$newsensiblesetting}";
+            }
+        }
+
+        set_config('sensiblesettings', $sensiblesettings, 'adminpresets');
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024080500.00);
+    }
+
     return true;
 }

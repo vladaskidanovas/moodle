@@ -37,7 +37,7 @@
 
 {{< core_course/coursecards }}
     {{$classes}}flex-nowrap overflow-auto{{/classes}}
-    {{$coursename}} {{fullname}} {{/coursename}}
+    {{$coursename}} {{{fullname}}} {{/coursename}}
     {{$coursecategory}}
         {{#showcoursecategory}}
             <span class="sr-only">
@@ -48,7 +48,7 @@
     {{/coursecategory}}
     {{$divider}}
         {{#showcoursecategory}}
-            <div class="pl-1 pr-1">|</div>
+            <div class="px-1">|</div>
         {{/showcoursecategory}}
     {{/divider}}
 {{/ core_course/coursecards }}

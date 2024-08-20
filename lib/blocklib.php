@@ -1342,7 +1342,7 @@ class block_manager {
 
             $controls[] = new action_menu_link_secondary(
                 $editactionurl,
-                new pix_icon('t/edit', $str, 'moodle', array('class' => 'iconsmall', 'title' => '')),
+                new pix_icon('i/settings', $str, 'moodle', ['class' => 'iconsmall', 'title' => '']),
                 $str,
                 [
                     'class' => 'editing_edit',
@@ -2156,7 +2156,8 @@ function block_instance($blockname, $instance = NULL, $page = NULL) {
 function block_load_class($blockname) {
     global $CFG;
 
-    if(empty($blockname)) {
+    $blocknameclean = clean_param($blockname, PARAM_PLUGIN);
+    if (empty($blockname) || empty($blocknameclean)) {
         return false;
     }
 

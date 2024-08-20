@@ -180,6 +180,14 @@ $CFG->wwwroot   = 'http://example.com/moodle';
 
 $CFG->dataroot  = '/home/example/moodledata';
 
+// Whether the Moodle router is fully configured.
+//
+// From Moodle 4.5 this is set to false.
+// The default value will change in a future release.
+//
+// When not configured on the web server it must be accessed via https://example.com/moodle/r.php
+// When configured the on the web server the 'r.php' may be removed.
+$CFG->routerconfigured = false;
 
 //=========================================================================
 // 4. DATA FILES PERMISSIONS
@@ -328,7 +336,7 @@ $CFG->admin = 'admin';
 //
 //
 // Following settings may be used to select session driver, uncomment only one of the handlers.
-//   Database session handler (not compatible with MyISAM):
+//   Database session handler:
 //      $CFG->session_handler_class = '\core\session\database';
 //      $CFG->session_database_acquire_lock_timeout = 120;
 //
@@ -773,6 +781,15 @@ $CFG->admin = 'admin';
 // Defaults to 60 minutes.
 //
 //      $CFG->enrolments_sync_interval = 3600
+//
+// Stored progress polling interval
+//
+// Stored progress bars which can be polled for updates via AJAX can be controlled by the
+// `progresspollinterval` config setting, to determine the interval (in seconds) at which the
+// polling should be done and latest update retrieved.
+// If no value is set, then it will default to 5 seconds.
+//
+// $CFG->progresspollinterval = 5;
 
 //=========================================================================
 // 7. SETTINGS FOR DEVELOPMENT SERVERS - not intended for production use!!!

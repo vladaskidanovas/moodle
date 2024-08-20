@@ -64,8 +64,8 @@ class data_field_multimenu extends data_field_base {
                 $content = array();
             }
         } else if ($recordid) {
-            $content = $DB->get_field('data_content', 'content', array('fieldid'=>$this->field->id, 'recordid'=>$recordid));
-            $content = explode('##', $content);
+            $contentfield = $DB->get_field('data_content', 'content', ['fieldid' => $this->field->id, 'recordid' => $recordid]);
+            $content = explode('##', $contentfield ?? '');
         } else {
             $content = array();
         }
@@ -165,7 +165,7 @@ class data_field_multimenu extends data_field_base {
         $str .= '</select>';
 
         $str .= html_writer::checkbox('f_'.$this->field->id.'_allreq', null, $allrequired,
-            get_string('selectedrequired', 'data'), array('class' => 'mr-1'));
+            get_string('selectedrequired', 'data'), array('class' => 'me-1'));
 
         return $str;
 

@@ -88,6 +88,7 @@ define('ASSIGN_EVENT_TYPE_DUE', 'due');
 define('ASSIGN_EVENT_TYPE_GRADINGDUE', 'gradingdue');
 define('ASSIGN_EVENT_TYPE_OPEN', 'open');
 define('ASSIGN_EVENT_TYPE_CLOSE', 'close');
+define('ASSIGN_EVENT_TYPE_EXTENSION', 'extension');
 
 require_once($CFG->libdir . '/accesslib.php');
 require_once($CFG->libdir . '/formslib.php');
@@ -4486,43 +4487,20 @@ class assign {
         $o = '';
         $cmid = $this->get_course_module()->id;
 
-        $links = array();
-        if (has_capability('gradereport/grader:view', $this->get_course_context()) &&
-                has_capability('moodle/grade:viewall', $this->get_course_context())) {
-            $gradebookurl = '/grade/report/grader/index.php?id=' . $this->get_course()->id;
-            $links[$gradebookurl] = get_string('viewgradebook', 'assign');
-        }
-        if ($this->is_blind_marking() &&
-                has_capability('mod/assign:revealidentities', $this->get_context())) {
-            $revealidentitiesurl = '/mod/assign/view.php?id=' . $cmid . '&action=revealidentities';
-            $links[$revealidentitiesurl] = get_string('revealidentities', 'assign');
-        }
-        foreach ($this->get_feedback_plugins() as $plugin) {
-            if ($plugin->is_enabled() && $plugin->is_visible()) {
-                foreach ($plugin->get_grading_actions() as $action => $description) {
-                    $url = '/mod/assign/view.php' .
-                           '?id=' .  $cmid .
-                           '&plugin=' . $plugin->get_type() .
-                           '&pluginsubtype=assignfeedback' .
-                           '&action=viewpluginpage&pluginaction=' . $action;
-                    $links[$url] = $description;
-                }
-            }
-        }
-
-        // Sort links alphabetically based on the link description.
-        core_collator::asort($links);
-
-        $gradingactions = new url_select($links);
-        $gradingactions->set_label(get_string('choosegradingaction', 'assign'));
-        $gradingactions->class .= ' mb-1';
-
         $gradingmanager = get_grading_manager($this->get_context(), 'mod_assign', 'submissions');
 
         $perpage = $this->get_assign_perpage();
         $filter = get_user_preferences('assign_filter', '');
         $markerfilter = get_user_preferences('assign_markerfilter', '');
-        $workflowfilter = get_user_preferences('assign_workflowfilter', '');
+
+        // Retrieve the 'workflowfilter' parameter, or set it to null if not provided.
+        $workflowfilter = optional_param('workflowfilter', null, PARAM_ALPHA);
+        // Check if the parameter is not null and if it exists in the list of valid workflow filters.
+        if ($workflowfilter !== null && array_key_exists($workflowfilter, $this->get_marking_workflow_filters())) {
+            // Save the valid 'workflowfilter' value as a user preference.
+            set_user_preference('assign_workflowfilter', $workflowfilter);
+        }
+
         $controller = $gradingmanager->get_active_controller();
         $showquickgrading = empty($controller) && $this->can_grade();
         $quickgrading = get_user_preferences('assign_quickgrading', false);
@@ -4594,11 +4572,9 @@ class assign {
         $gradingoptionsdata->perpage = $perpage;
         $gradingoptionsdata->filter = $filter;
         $gradingoptionsdata->markerfilter = $markerfilter;
-        $gradingoptionsdata->workflowfilter = $workflowfilter;
         $gradingoptionsform->set_data($gradingoptionsdata);
 
-        $buttons = new \mod_assign\output\grading_actionmenu($this->get_course_module()->id,
-             $this->is_any_submission_plugin_enabled(), $this->count_submissions());
+        $buttons = new \mod_assign\output\grading_actionmenu(cmid: $this->get_course_module()->id, assign: $this);
         $actionformtext = $this->get_renderer()->render($buttons);
         $currenturl = new moodle_url('/mod/assign/view.php', ['id' => $this->get_course_module()->id, 'action' => 'grading']);
         $PAGE->activityheader->set_attrs(['hidecompletion' => true]);
@@ -4606,8 +4582,8 @@ class assign {
         $PAGE->requires->js_call_amd('mod_assign/user', 'init', [$currenturl->out(false)]);
 
         // Conditionally add the group JS if we have groups enabled.
-        if ($this->get_course()->groupmode) {
-            $PAGE->requires->js_call_amd('core_course/actionbar/group', 'init', [$currenturl->out(false)]);
+        if (groups_get_activity_groupmode($this->get_course_module(), $this->get_course())) {
+            $PAGE->requires->js_call_amd('core_course/actionbar/group', 'init', [$currenturl->out(false), $cmid]);
         }
 
         $header = new assign_header($this->get_instance(),
@@ -4621,8 +4597,6 @@ class assign {
         $o .= $this->get_renderer()->render($header);
 
         $o .= $actionformtext;
-
-        $o .= $this->get_renderer()->render($gradingactions);
 
         // Plagiarism update status apearring in the grading book.
         if (!empty($CFG->enableplagiarism)) {
@@ -6940,7 +6914,8 @@ class assign {
      * @return boolean
      */
     public function save_user_extension($userid, $extensionduedate) {
-        global $DB;
+        global $DB, $CFG;
+        require_once($CFG->dirroot.'/calendar/lib.php');
 
         // Need submit permission to submit an assignment.
         require_capability('mod/assign:grantextension', $this->context);
@@ -6970,6 +6945,48 @@ class assign {
 
         if ($result) {
             \mod_assign\event\extension_granted::create_from_assign($this, $userid)->trigger();
+
+            $cm = $this->get_course_module();
+            $instance = $this->get_instance();
+
+            if ($extensionduedate) {
+                $event = $DB->get_record('event', [
+                    'userid' => $userid,
+                    'eventtype' => ASSIGN_EVENT_TYPE_EXTENSION,
+                    'modulename' => 'assign',
+                    'instance' => $instance->id,
+                ]);
+
+                if ($event) {
+                    $event->timestart = $extensionduedate;
+                    $DB->update_record('event', $event);
+                } else {
+                    $event = new stdClass();
+                    $event->type          = CALENDAR_EVENT_TYPE_ACTION;
+                    $event->name          = get_string('calendarextension', 'assign', $instance->name);
+                    $event->description   = format_module_intro('assign', $instance, $cm->id);
+                    $event->format        = FORMAT_HTML;
+                    $event->courseid      = 0;
+                    $event->groupid       = 0;
+                    $event->userid        = $userid;
+                    $event->modulename    = 'assign';
+                    $event->instance      = $instance->id;
+                    $event->timestart     = $extensionduedate;
+                    $event->timeduration  = 0;
+                    $event->visible       = instance_is_visible('assign', $instance);
+                    $event->eventtype     = ASSIGN_EVENT_TYPE_EXTENSION;
+                    $event->priority      = null;
+
+                    calendar_event::create($event, false);
+                }
+            } else {
+                $DB->delete_records('event', [
+                  'userid' => $userid,
+                  'eventtype' => ASSIGN_EVENT_TYPE_EXTENSION,
+                  'modulename' => 'assign',
+                  'instance' => $instance->id,
+                ]);
+            }
         }
         return $result;
     }
@@ -7407,9 +7424,6 @@ class assign {
             }
             if (isset($formdata->markerfilter)) {
                 set_user_preference('assign_markerfilter', $formdata->markerfilter);
-            }
-            if (isset($formdata->workflowfilter)) {
-                set_user_preference('assign_workflowfilter', $formdata->workflowfilter);
             }
             if ($showquickgrading) {
                 set_user_preference('assign_quickgrading', isset($formdata->quickgrading));

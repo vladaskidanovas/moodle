@@ -298,7 +298,7 @@ class page_requirements_manager {
      * @return array List of safe config values that are available to javascript.
      */
     public function get_config_for_javascript(moodle_page $page, renderer_base $renderer) {
-        global $CFG;
+        global $CFG, $USER;
 
         if (empty($this->M_cfg)) {
             $iconsystem = \core\output\icon_system::instance();
@@ -315,6 +315,7 @@ class page_requirements_manager {
 
             $this->M_cfg = [
                 'wwwroot'               => $CFG->wwwroot,
+                'apibase'               => $this->get_api_base(),
                 'homeurl'               => $page->navigation->action,
                 'sesskey'               => sesskey(),
                 'sessiontimeout'        => $CFG->sessiontimeout,
@@ -335,6 +336,7 @@ class page_requirements_manager {
                 'langrev'               => get_string_manager()->get_revision(),
                 'templaterev'           => $this->get_templaterev(),
                 'siteId'                => (int) SITEID,
+                'userId'                => (int) $USER->id,
             ];
             if ($CFG->debugdeveloper) {
                 $this->M_cfg['developerdebug'] = true;
@@ -344,6 +346,29 @@ class page_requirements_manager {
             }
         }
         return $this->M_cfg;
+    }
+
+    /**
+     * Return the base URL for the API.
+     *
+     * If the router has been fully configured on the web server then we can use the shortened route, otherwise the r.php.
+     *
+     * @return string
+     */
+    protected function get_api_base(): string {
+        global $CFG;
+
+        if (!empty($CFG->router_configured)) {
+            return sprintf(
+                "%s/api/",
+                $CFG->wwwroot,
+            );
+        }
+
+        return sprintf(
+            "%s/r.php/api/",
+            $CFG->wwwroot,
+        );
     }
 
     /**
@@ -1738,7 +1763,7 @@ EOF;
      * @return string the HTML code to to at the end of the page.
      */
     public function get_end_code() {
-        global $CFG;
+        global $CFG, $USER;
         $output = '';
 
         // Set the log level for the JS logging.
@@ -1751,6 +1776,9 @@ EOF;
         // Add any global JS that needs to run on all pages.
         $this->js_call_amd('core/page_global', 'init');
         $this->js_call_amd('core/utility');
+        $this->js_call_amd('core/storage_validation', 'init', [
+            !empty($USER->currentlogin) ? (int) $USER->currentlogin : null
+        ]);
 
         // Call amd init functions.
         $output .= $this->get_amd_footercode();

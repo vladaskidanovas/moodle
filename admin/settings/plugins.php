@@ -287,7 +287,7 @@ if ($hassiteconfig) {
         $items[] = new admin_setting_configcheckbox('filtermatchonepertext', new lang_string('filtermatchonepertext', 'admin'), new lang_string('configfiltermatchonepertext', 'admin'), 0);
         $items[] = new admin_setting_configcheckbox('filternavigationwithsystemcontext',
                 new lang_string('filternavigationwithsystemcontext', 'admin'),
-                new lang_string('configfilternavigationwithsystemcontext', 'admin'), 0);
+                new lang_string('configfilternavigationwithsystemcontext', 'admin'), 1);
         foreach ($items as $item) {
             $item->set_updatedcallback('reset_text_filters_cache');
             $temp->add($item);
@@ -842,6 +842,12 @@ if ($hassiteconfig) {
     $temp = new admin_settingpage('managecontentbanktypes', new lang_string('managecontentbanktypes'));
     $temp->add(new admin_setting_managecontentbankcontenttypes());
     $ADMIN->add('contentbanksettings', $temp);
+    $ADMIN->add('contentbanksettings',
+        new admin_externalpage('contentbank', new lang_string('contentbankcustomfields', 'contentbank'),
+            $CFG->wwwroot . '/contentbank/customfield.php',
+            'moodle/contentbank:configurecustomfields'
+        )
+    );
     $plugins = core_plugin_manager::instance()->get_plugins_of_type('contenttype');
     foreach ($plugins as $plugin) {
         /** @var \core\plugininfo\contentbank $plugin */

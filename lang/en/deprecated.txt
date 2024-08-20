@@ -116,6 +116,7 @@ coursecalendar,core_calendar
 importcalendarexternal,core_calendar
 nocalendarsubscriptions,core_calendar
 datechanged,core
+daystakingcourse,core_course
 siteregistrationcontact,core_hub
 siteregistrationcontact_help,core_hub
 registrationcontactno,core
@@ -123,3 +124,7 @@ registrationcontactyes,core
 error:duplicatename,core_badges
 error:cannotact,core_badges
 reviewbadge,core_badges
+myisamproblem,core_error
+newpasswordtext,core
+cannotsetpassword,core_error
+registerwithmoodleorginfoapp,core_hub

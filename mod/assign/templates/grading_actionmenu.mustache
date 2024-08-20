@@ -25,17 +25,20 @@
     Context variables required for this template:
     * userselector - HTML that outputs the user selector
     * groupselector - (optional) HTML that outputs the group selector
+    * extrafiltersdropdown - HTML that outputs the extra filters dropdown
+    * actions - (optional) HTML that outputs the bulk action menu
 
     Example context (json):
     {
         "userselector": "<div class='user-search'></div>",
         "groupselector": "<div class='group-selector'></div>",
+        "extrafiltersdropdown": "<div class='dropdown extrafilters'></div>",
         "pagereset": "http://moodle.local/mod/assign/view.php?id=2&action=grading&group=0",
-        "downloadall": "https://moodle.org"
+        "actions": "<div class='action-menu'></div>"
     }
 
 }}
-<div class="container-fluid tertiary-navigation full-width-bottom-border">
+<div class="container-fluid tertiary-navigation full-width-bottom-border mb-2">
     <div class="row">
         <div class="navitem">
             <h2>{{#str}}gradeitem:submissions, mod_assign{{/str}}</h2>
@@ -53,16 +56,27 @@
             </div>
             <div class="navitem-divider d-none d-sm-flex"></div>
         {{/groupselector}}
+        {{#extrafiltersdropdown}}
+            <div class="navitem">
+                {{{.}}}
+            </div>
+            <div class="navitem-divider d-none d-sm-flex"></div>
+        {{/extrafiltersdropdown}}
         {{#pagereset}}
             <div class="navitem align-self-center">
                 <a href="{{{.}}}" class="btn btn-link">{{#str}}clearall, core{{/str}}</a>
             </div>
             <div class="navitem-divider"></div>
         {{/pagereset}}
-        {{#downloadall}}
-        <div class="navitem ml-sm-auto">
-            <a class="btn btn-secondary" href="{{downloadall}}">{{#str}}downloadall, mod_assign{{/str}}</a>
+        {{#graderurl}}
+        <div class="navitem ms-sm-auto align-self-center">
+            <a class="btn btn-primary" href="{{graderurl}}">{{#str}}viewgrader, mod_assign{{/str}}</a>
         </div>
-        {{/downloadall}}
+        {{/graderurl}}
     </div>
+</div>
+<div class="row">
+{{#actions}}
+    <div class="d-flex ml-auto me-3">{{{actions}}}</div>
+{{/actions}}
 </div>

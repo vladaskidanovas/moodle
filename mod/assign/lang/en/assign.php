@@ -71,7 +71,13 @@ $string['assignmentduesoonhtml'] = '<p>Hi {$a->firstname},</p>
 <p>The assignment <strong>{$a->assignmentname}</strong> in course {$a->coursename} is due soon.</p>
 <p><strong>Due: {$a->duedate}</strong></p>
 <p><a href="{$a->url}">Go to activity</a></p>';
+$string['assignmentoverduehtml'] = '<p>Hi {$a->firstname},</p>
+<p><strong>{$a->assignmentname}</strong> in course {$a->coursename} was due on <strong>{$a->duedate}</strong>.</p>
+<p>You might still be able to submit your assignment{$a->cutoffsnippet}, but your submission will be marked as late.</p>
+<p><a href="{$a->url}">Go to activity</a></p>';
+$string['assignmentoverduehtmlcutoffsnippet'] = ' <strong>by {$a->cutoffdate}</strong>';
 $string['assignmentduesoonsubject'] = 'Due on {$a->duedate}: {$a->assignmentname}';
+$string['assignmentoverduesubject'] = 'Overdue: {$a->assignmentname}';
 $string['assignmentisdue'] = 'Assignment is due';
 $string['assignmentmail'] = '{$a->grader} has posted some feedback on your
 assignment submission for \'{$a->assignment}\'
@@ -126,15 +132,15 @@ $string['batchsetallocatedmarker'] = 'Set allocated marker for {$a} selected use
 $string['batchsetmarkingworkflowstateforusers'] = 'Set marking workflow state for {$a} selected user(s).';
 $string['beginassignment'] = 'Begin assignment';
 $string['blindmarking'] = 'Anonymous submissions';
-$string['blindmarkingenabledwarning'] = 'Anonymous submissions are enabled for this activity. Grades will not be added to the gradebook until student identities are revealed via the grading action menu.';
+$string['blindmarkingenabledwarning'] = 'Anonymous submissions are enabled for this activity. Grades will not be added to the gradebook until student identities are revealed via the "Actions" menu.';
 $string['blindmarking_help'] = 'Anonymous submissions hide the identity of students from markers. Anonymous submission settings will be locked once a submission or grade has been made in relation to this assignment.';
 $string['cachedef_overrides'] = 'User and group override information';
 $string['calendardue'] = '{$a} is due';
+$string['calendarextension'] = '{$a} is due (extension)';
 $string['calendargradingdue'] = '{$a} is due to be graded';
 $string['caneditsubmission'] = 'You can edit your submission and submit it after the time limit has expired, but it will be marked as late.';
 $string['changeuser'] = 'Change user';
 $string['changefilters'] = 'Change filters';
-$string['choosegradingaction'] = 'Grading action';
 $string['choosemarker'] = 'Choose...';
 $string['chooseoperation'] = 'Choose operation';
 $string['clickexpandreviewpanel'] = 'Click to expand review panel';
@@ -163,10 +169,10 @@ $string['cutoffdatecolon'] = 'Cut-off date: {$a}';
 $string['cutoffdate_help'] = 'If set, submissions will not be accepted after this date without an extension. If not set, submissions will always be accepted.';
 $string['cutoffdatevalidation'] = 'Cut-off date cannot be earlier than the due date.';
 $string['cutoffdatefromdatevalidation'] = 'Cut-off date cannot be earlier than the allow submissions from date.';
-$string['defaultgradescale'] = 'Default grade scale';
-$string['defaultgradescale_help'] = 'The default grade scale to be used when creating new assignments. Only site level scales can be used as the default.';
-$string['defaultgradetype'] = 'Default grade type';
-$string['defaultgradetype_help'] = 'The default grade type to be used when creating new assignments';
+$string['defaultgradescale'] = 'Grading scale';
+$string['defaultgradescale_help'] = 'The default grading scale for new assignments. Only standard scales are available.';
+$string['defaultgradetype'] = 'Grade type';
+$string['defaultgradetype_help'] = 'The default grade type for new assignments.';
 $string['defaultlayout'] = 'Restore default layout';
 $string['defaultsettings'] = 'Default assignment settings';
 $string['defaultsettings_help'] = 'These settings define the defaults for all new assignments.';
@@ -357,6 +363,7 @@ $string['markingallocation'] = 'Use marking allocation';
 $string['markingallocation_help'] = 'If enabled together with marking workflow, markers can be allocated to particular students.';
 $string['markinganonymous'] = 'Allow partial release of grades while marking anonymously';
 $string['markinganonymous_help'] = 'If enabled together with anonymous submissions and marking workflow, it allows partial release of grades while marking anonymously.';
+$string['markingstate'] = 'Marking state';
 $string['markingworkflow'] = 'Use marking workflow';
 $string['markingworkflow_help'] = 'If enabled, marks will go through a series of workflow stages before being released to students. This allows for multiple rounds of marking and allows marks to be released to all students at the same time.';
 $string['markingworkflowstate'] = 'Marking workflow state';
@@ -381,6 +388,7 @@ $string['maxgrade'] = 'Maximum Grade';
 $string['maxperpage'] = 'Maximum assignments per page';
 $string['maxperpage_help'] = 'The maximum number of assignments a grader can show in the assignment grading page. This setting is useful in preventing timeouts for courses with a large number of participants.';
 $string['messageprovider:assign_due_soon'] = 'Assignment due soon notification';
+$string['messageprovider:assign_overdue'] = 'Assignment overdue notification';
 $string['messageprovider:assign_notification'] = 'Assignment notifications';
 $string['modulename'] = 'Assignment';
 $string['modulename_help'] = 'The assignment activity module enables a teacher to communicate tasks, collect work and provide grades and feedback.
@@ -528,6 +536,7 @@ $string['selectuser'] = 'Select {$a}';
 $string['sendlatenotifications'] = 'Notify graders about late submissions';
 $string['sendlatenotifications_help'] = 'If enabled, graders (usually teachers) receive a message whenever a student submits an assignment late. Message methods are configurable.';
 $string['sendnotificationduedatesoon'] = 'Notify user of an approaching assignment due date';
+$string['sendnotificationoverdue'] = 'Notify user of an assignment that is overdue';
 $string['sendsubmissionreceipts'] = 'Send submission receipt to students';
 $string['sendsubmissionreceipts_help'] = 'This switch enables submission receipts for students. Students will receive a notification every time they successfully submit an assignment.';
 $string['setmarkingallocation'] = 'Set allocated marker';
@@ -666,6 +675,7 @@ $string['viewfeedback'] = 'View feedback';
 $string['viewfeedbackforuser'] = 'View feedback for user: {$a}';
 $string['viewfullgradingpage'] = 'Open the full grading page to provide feedback';
 $string['viewgradebook'] = 'View gradebook';
+$string['viewgrader'] = 'View Grader';
 $string['viewgradingformforstudent'] = 'View grading page for student: (id={$a->id}, fullname={$a->fullname}).';
 $string['viewgrading'] = 'View all submissions';
 $string['viewownsubmissionform'] = 'View own submit assignment page.';
@@ -681,5 +691,6 @@ $string['xofy'] = '{$a->x} of {$a->y}';
 
 // Deprecated since Moodle 4.5.
 $string['attemptreopenmethod_none'] = 'Never';
+$string['choosegradingaction'] = 'Grading action';
 $string['groupoverridesdeleted'] = 'Group overrides deleted';
 $string['useroverridesdeleted'] = 'User overrides deleted';

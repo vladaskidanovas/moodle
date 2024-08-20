@@ -65,12 +65,22 @@ function subsection_add_instance($moduleinstance, $mform = null) {
 
     $id = $DB->insert_record('subsection', $moduleinstance);
 
+    // Due to name collision, when the object came from the form, the availability conditions are called
+    // availabilityconditionsjson instead of availability.
+    $cmavailability = $moduleinstance->availabilityconditionsjson ?? $moduleinstance->availability ?? null;
+    // Availability could be an empty string but we need to force null.
+    if (empty($cmavailability)) {
+        $cmavailability = null;
+    }
+
     formatactions::section($moduleinstance->course)->create_delegated(
         manager::PLUGINNAME,
         $id,
         (object)[
             'name' => $moduleinstance->name,
-        ]);
+            'availability' => $cmavailability,
+        ]
+    );
 
     return $id;
 }
@@ -90,6 +100,18 @@ function subsection_update_instance($moduleinstance, $mform = null) {
 
     $moduleinstance->timemodified = time();
     $moduleinstance->id = $moduleinstance->instance;
+
+    // Due to name collision, when the object came from the form, the availability conditions are called
+    // availabilityconditionsjson instead of availability.
+    $cmavailability = $moduleinstance->availabilityconditionsjson ?? $moduleinstance->availability ?? null;
+    if (!empty($cmavailability)) {
+        $DB->set_field(
+            'course_sections',
+            'availability',
+            $cmavailability,
+            ['component' => manager::PLUGINNAME, 'itemid' => $moduleinstance->id]
+        );
+    }
 
     return $DB->update_record('subsection', $moduleinstance);
 }
@@ -206,4 +228,65 @@ function subsection_extend_navigation($subsectionnode, $course, $module, $cm) {
  * @param navigation_node $subsectionnode {@see navigation_node}
  */
 function subsection_extend_settings_navigation($settingsnav, $subsectionnode = null) {
+}
+
+/**
+ * Sets dynamic information about a course module
+ *
+ * This function is called from cm_info when displaying the module
+ * mod_subsection can be displayed inline on course page and therefore have no course link
+ *
+ * @param cm_info $cm
+ */
+function subsection_cm_info_dynamic(cm_info $cm) {
+    $cm->set_no_view_link();
+}
+
+/**
+ * Sets the special subsection display on course page.
+ *
+ * @param cm_info $cm Course-module object
+ */
+function subsection_cm_info_view(cm_info $cm) {
+    global $DB, $PAGE;
+
+    $cm->set_custom_cmlist_item(true);
+    $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
+
+    // Get the section info.
+    $delegatedsection = manager::create_from_coursemodule($cm)->get_delegated_section_info();
+
+    // Render the delegated section.
+    $format = course_get_format($course);
+    $renderer = $PAGE->get_renderer('format_' . $course->format);
+    $outputclass = $format->get_output_classname('content\\delegatedsection');
+    /** @var \core_courseformat\output\local\content\delegatedsection $delegatedsectionoutput */
+    $delegatedsectionoutput = new $outputclass($format, $delegatedsection);
+
+    $cm->set_content($renderer->render($delegatedsectionoutput), true);
+}
+
+/**
+ * Add a get_coursemodule_info function to add 'extra' information for the course (see resource).
+ *
+ * Given a course_module object, this function returns any "extra" information that may be needed
+ * when printing this activity in a course listing.  See get_array_of_activities() in course/lib.php.
+ *
+ * @param stdClass $coursemodule The coursemodule object (record).
+ * @return cached_cm_info|bool An object on information that the courses will know about. False if not found.
+ */
+function subsection_get_coursemodule_info(stdClass $coursemodule): cached_cm_info|bool {
+    global $DB;
+
+    $dbparams = ['component' => 'mod_subsection', 'itemid' => $coursemodule->instance];
+    if (! $delegatedsection = $DB->get_record('course_sections', $dbparams, 'id, name')) {
+        return false;
+    }
+
+    $result = new cached_cm_info();
+    $result->name = $delegatedsection->name;
+
+    $result->customdata['sectionid'] = $delegatedsection->id;
+
+    return $result;
 }

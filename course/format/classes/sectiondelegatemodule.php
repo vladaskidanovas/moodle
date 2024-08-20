@@ -149,7 +149,7 @@ abstract class sectiondelegatemodule extends sectiondelegate {
         controlmenu $controlmenu,
         renderer_base $output,
     ): ?action_menu {
-        $controlmenuclass = $format->get_output_classname('content\\cm\\controlmenu');
+        $controlmenuclass = $format->get_output_classname('content\\cm\\delegatedcontrolmenu');
         $controlmenu = new $controlmenuclass(
             $format,
             $this->sectioninfo,
@@ -167,5 +167,21 @@ abstract class sectiondelegatemodule extends sectiondelegate {
     public function put_section_state_extra_updates(section_info $section, stateupdates $updates): void {
         $cm = get_coursemodule_from_instance($this->get_module_name(), $section->itemid);
         $updates->add_cm_put($cm->id);
+    }
+
+    public function section_updated(stdClass $sectionrecord): void {
+        global $DB;
+
+        $cmrecord = [];
+        if (isset($sectionrecord->availability) && $sectionrecord->availability !== $this->cm->availability) {
+            $cmrecord['availability'] = $sectionrecord->availability;
+        }
+
+        if (empty($cmrecord)) {
+            return;
+        }
+
+        $cmrecord['id'] = $this->cm->id;
+        $DB->update_record('course_modules', (object)$cmrecord);
     }
 }

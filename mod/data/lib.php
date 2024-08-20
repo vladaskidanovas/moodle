@@ -1791,7 +1791,7 @@ function data_print_preference_form($data, $perpage, $search, $sort='', $order='
     $pagesizes = array(2=>2,3=>3,4=>4,5=>5,6=>6,7=>7,8=>8,9=>9,10=>10,15=>15,
                        20=>20,30=>30,40=>40,50=>50,100=>100,200=>200,300=>300,400=>400,500=>500,1000=>1000);
     echo html_writer::select($pagesizes, 'perpage', $perpage, false, array('id' => 'pref_perpage',
-        'class' => 'custom-select mr-1'));
+        'class' => 'custom-select me-1'));
 
     if ($advanced) {
         $regsearchclass = 'search_none';
@@ -1800,12 +1800,12 @@ function data_print_preference_form($data, $perpage, $search, $sort='', $order='
         $regsearchclass = 'search_inline';
         $advancedsearchclass = 'search_none';
     }
-    echo '<div id="reg_search" class="' . $regsearchclass . ' mr-1" >';
-    echo '<label for="pref_search" class="mr-1">' . get_string('search') . '</label><input type="text" ' .
-         'class="form-control d-inline-block align-middle w-auto mr-1" size="16" name="search" id= "pref_search" value="' . s($search) . '" /></div>';
+    echo '<div id="reg_search" class="' . $regsearchclass . ' me-1" >';
+    echo '<label for="pref_search" class="me-1">' . get_string('search') . '</label><input type="text" ' .
+         'class="form-control d-inline-block align-middle w-auto me-1" size="16" name="search" id= "pref_search" value="' . s($search) . '" /></div>';
     echo '<label for="pref_sortby">'.get_string('sortby').'</label> ';
     // foreach field, print the option
-    echo '<select name="sort" id="pref_sortby" class="custom-select mr-1">';
+    echo '<select name="sort" id="pref_sortby" class="custom-select me-1">';
     if ($fields = $DB->get_records('data_fields', array('dataid'=>$data->id), 'name')) {
         echo '<optgroup label="'.get_string('fields', 'data').'">';
         foreach ($fields as $field) {
@@ -1836,7 +1836,7 @@ function data_print_preference_form($data, $perpage, $search, $sort='', $order='
     echo '</optgroup>';
     echo '</select>';
     echo '<label for="pref_order" class="accesshide">'.get_string('order').'</label>';
-    echo '<select id="pref_order" name="order" class="custom-select mr-1">';
+    echo '<select id="pref_order" name="order" class="custom-select me-1">';
     if ($order == 'ASC') {
         echo '<option value="ASC" selected="selected">'.get_string('ascending','data').'</option>';
     } else {
@@ -1862,7 +1862,7 @@ function data_print_preference_form($data, $perpage, $search, $sort='', $order='
          'onchange="showHideAdvSearch(this.checked);" class="mx-1" />' .
          '<label for="advancedcheckbox">' . get_string('advancedsearch', 'data') . '</label>';
     echo '</div>';
-    echo '<div id="advsearch-save-sec" class="ml-auto '. $regsearchclass . '">';
+    echo '<div id="advsearch-save-sec" class="ms-auto '. $regsearchclass . '">';
     echo '<input type="submit" class="btn btn-secondary" value="' . get_string('savesettings', 'data') . '" />';
     echo '</div>';
     echo '</div>';
@@ -1968,7 +1968,7 @@ function data_print_preference_form($data, $perpage, $search, $sort='', $order='
     echo '</td></tr>';
 
     echo '<tr><td colspan="4"><br/>' .
-         '<input type="submit" class="btn btn-primary mr-1" value="' . get_string('savesettings', 'data') . '" />' .
+         '<input type="submit" class="btn btn-primary me-1" value="' . get_string('savesettings', 'data') . '" />' .
          '<input type="submit" class="btn btn-secondary" name="resetadv" value="' . get_string('resetsettings', 'data') . '" />' .
          '</td></tr>';
     echo '</table>';
@@ -4125,17 +4125,17 @@ function data_view($data, $course, $cm, $context) {
  */
 function mod_data_get_fontawesome_icon_map() {
     return [
-        'mod_data:field/checkbox' => 'fa-check-square-o',
-        'mod_data:field/date' => 'fa-calendar-o',
-        'mod_data:field/file' => 'fa-file',
-        'mod_data:field/latlong' => 'fa-globe',
+        'mod_data:field/checkbox' => 'fa-regular fa-square-check',
+        'mod_data:field/date' => 'fa-regular fa-calendar',
+        'mod_data:field/file' => 'fa-regular fa-file',
+        'mod_data:field/latlong' => 'fa-earth-americas',
         'mod_data:field/menu' => 'fa-bars',
         'mod_data:field/multimenu' => 'fa-bars',
         'mod_data:field/number' => 'fa-hashtag',
-        'mod_data:field/picture' => 'fa-picture-o',
-        'mod_data:field/radiobutton' => 'fa-circle-o',
-        'mod_data:field/textarea' => 'fa-font',
+        'mod_data:field/picture' => 'fa-regular fa-image',
+        'mod_data:field/radiobutton' => 'fa-regular fa-circle-dot',
         'mod_data:field/text' => 'fa-i-cursor',
+        'mod_data:field/textarea' => 'fa-font',
         'mod_data:field/url' => 'fa-link',
     ];
 }

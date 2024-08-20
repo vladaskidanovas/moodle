@@ -32,8 +32,11 @@ use Behat\Mink\Element\NodeElement;
 use Behat\Mink\Exception\DriverException;
 use Behat\Mink\Exception\ElementNotFoundException;
 use Behat\Mink\Exception\ExpectationException;
+use Facebook\WebDriver\Exception\NoSuchAlertException;
 use Facebook\WebDriver\Exception\NoSuchElementException;
 use Facebook\WebDriver\Exception\StaleElementReferenceException;
+use Facebook\WebDriver\WebDriverAlert;
+use Facebook\WebDriver\WebDriverExpectedCondition;
 
 /**
  * Cross component steps definitions.
@@ -263,11 +266,24 @@ class behat_general extends behat_base {
     }
 
     /**
+     * Wait for an alert to be displayed.
+     *
+     * @return WebDriverAlert
+     */
+    public function wait_for_alert(): WebDriverAlert {
+        $webdriver = $this->getSession()->getDriver()->getWebdriver();
+        $webdriver->wait()->until(WebDriverExpectedCondition::alertIsPresent());
+
+        return $webdriver->switchTo()->alert();
+    }
+
+    /**
      * Accepts the currently displayed alert dialog. This step does not work in all the browsers, consider it experimental.
      * @Given /^I accept the currently displayed dialog$/
      */
     public function accept_currently_displayed_alert_dialog() {
-        $this->getSession()->getDriver()->getWebDriver()->switchTo()->alert()->accept();
+        $alert = $this->wait_for_alert();
+        $alert->accept();
     }
 
     /**
@@ -275,7 +291,8 @@ class behat_general extends behat_base {
      * @Given /^I dismiss the currently displayed dialog$/
      */
     public function dismiss_currently_displayed_alert_dialog() {
-        $this->getSession()->getDriver()->getWebDriver()->switchTo()->alert()->dismiss();
+        $alert = $this->wait_for_alert();
+        $alert->dismiss();
     }
 
     /**
@@ -286,9 +303,7 @@ class behat_general extends behat_base {
      * @param string $link
      */
     public function click_link($link) {
-
         $linknode = $this->find_link($link);
-        $this->ensure_node_is_visible($linknode);
         $linknode->click();
     }
 
@@ -393,11 +408,8 @@ class behat_general extends behat_base {
      * @param string $selectortype The type of what we look for
      */
     public function i_click_on($element, $selectortype) {
-
         // Gets the node based on the requested selector type and locator.
-        $node = $this->get_selected_node($selectortype, $element);
-        $this->ensure_node_is_visible($node);
-        $node->click();
+        $this->get_selected_node($selectortype, $element)->click();
     }
 
     /**
@@ -458,9 +470,7 @@ class behat_general extends behat_base {
      * @param string $nodeselectortype The type of selector where we look in
      */
     public function i_click_on_in_the($element, $selectortype, $nodeelement, $nodeselectortype) {
-
         $node = $this->get_node_in_container($selectortype, $element, $nodeselectortype, $nodeelement);
-        $this->ensure_node_is_visible($node);
         $node->click();
     }
 
@@ -502,7 +512,6 @@ class behat_general extends behat_base {
         }
 
         $node = $this->get_node_in_container($selectortype, $element, $nodeselectortype, $nodeelement);
-        $this->ensure_node_is_visible($node);
 
         // KeyUP and KeyDown require the element to be displayed in the current window.
         $this->execute_js_on_node($node, '{{ELEMENT}}.scrollIntoView();');
@@ -1318,12 +1327,22 @@ EOF;
      * browser window has same viewport size even when you run Behat on multiple operating systems.
      *
      * @throws ExpectationException
-     * @Then /^I change (window|viewport) size to "(mobile|tablet|small|medium|large|\d+x\d+)"$/
-     * @Then /^I change the (window|viewport) size to "(mobile|tablet|small|medium|large|\d+x\d+)"$/
+     * @Then /^I change (window|viewport) size to "(mobile|tablet|small|medium|large|\d+x\d+)"( without runtime scaling)?$/
+     * @Then /^I change the (window|viewport) size to "(mobile|tablet|small|medium|large|\d+x\d+)"( without runtime scaling)?$/
+     * @param string $windowviewport Whether this is a window or viewport size hcange
      * @param string $windowsize size of the window (mobile|tablet|small|medium|large|wxh).
+     * @param null|string $scale whether to lock runtime scaling (string) or to allow it (null)
      */
-    public function i_change_window_size_to($windowviewport, $windowsize) {
-        $this->resize_window($windowsize, $windowviewport === 'viewport');
+    public function i_change_window_size_to(
+        $windowviewport,
+        $windowsize,
+        ?string $scale = null,
+    ): void {
+        $this->resize_window(
+            $windowsize,
+            $windowviewport === 'viewport',
+            $scale === null,
+        );
     }
 
     /**
@@ -2357,9 +2376,23 @@ EOF;
      * @param string $plugin Plugin we look for
      * @param string $plugintype The type of the plugin
      */
+    #[\core\attribute\example('I enable "subsection" "mod" plugin')]
     public function i_enable_plugin($plugin, $plugintype) {
         $class = core_plugin_manager::resolve_plugininfo_class($plugintype);
         $class::enable_plugin($plugin, true);
+    }
+
+    /**
+     * Disable an specific plugin.
+     *
+     * @When /^I disable "(?P<plugin_string>(?:[^"]|\\")*)" "(?P<plugintype_string>[^"]*)" plugin$/
+     * @param string $plugin Plugin we look for
+     * @param string $plugintype The type of the plugin
+     */
+    #[\core\attribute\example('I disable "page" "mod" plugin')]
+    public function i_disable_plugin($plugin, $plugintype) {
+        $class = core_plugin_manager::resolve_plugininfo_class($plugintype);
+        $class::enable_plugin($plugin, false);
     }
 
     /**
@@ -2489,6 +2522,23 @@ EOF;
         } else {
             throw new \Behat\Mink\Exception\ExpectationException('Invalid state for switch: ' . $state, $this->getSession());
         }
+
+    }
+
+    /**
+     * Update a stored progress bar.
+     *
+     * @Given I set the stored progress bar :idnumber to :percent
+     * @param string $idnumber The unique idnumber of the stored progress bar.
+     * @param float $percent The value to update the progress bar to.
+     */
+    public function i_set_the_stored_progress_bar_to(string $idnumber, float $percent): void {
+        $progress = \core\output\stored_progress_bar::get_by_idnumber($idnumber);
+        if (!$progress) {
+            throw new invalid_parameter_exception('No progress bar with idnumber ' . $idnumber . 'found.');
+        }
+        $progress->auto_update(false);
+        $progress->update_full($percent, '');
     }
 
     /**

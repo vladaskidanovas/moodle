@@ -243,6 +243,15 @@ class mod_feedback_complete_form extends moodleform {
     }
 
     /**
+     * Returns whether the form is considered read-only (e.g. when previewing it)
+     *
+     * @return bool
+     */
+    private function is_readonly(): bool {
+        return $this->mode === self::MODE_PRINT;
+    }
+
+    /**
      * Returns the current course module
      * @return cm_info
      */
@@ -327,9 +336,14 @@ class mod_feedback_complete_form extends moodleform {
             $element->freeze();
         }
 
+        // For read-only forms, just disable each added element.
+        if ($this->is_readonly()) {
+            $this->_form->disabledIf($element->getName(), 'id');
+        }
+
         // Add red asterisks on required fields.
         if ($item->required) {
-            $required = $OUTPUT->pix_icon('req', get_string('requiredelement', 'form'), 'moodle', ['class' => 'ml-2']);
+            $required = $OUTPUT->pix_icon('req', get_string('requiredelement', 'form'), 'moodle', ['class' => 'ms-2']);
             $element->setLabel($element->getLabel() . $required);
             $this->hasrequired = true;
         }

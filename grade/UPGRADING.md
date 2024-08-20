@@ -1,6 +1,6 @@
 # core_grades (subsystem) Upgrade notes
 
-## 4.5dev
+## 4.5dev+
 
 ### Removed
 
@@ -9,6 +9,14 @@
    - `behat_grade::select_in_gradebook_tabs`
 
   For more information see [MDL-74581](https://tracker.moodle.org/browse/MDL-74581)
+
+### Changed
+
+- The grade `itemname` property contained in the return structure of the following external methods is now PARAM_RAW:
+    - `core_grades_get_gradeitems`
+    - `gradereport_user_get_grade_items`
+
+  For more information see [MDL-80017](https://tracker.moodle.org/browse/MDL-80017)
 
 ### Deprecated
 

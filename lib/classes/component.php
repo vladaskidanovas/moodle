@@ -102,41 +102,90 @@ class component {
     ];
     /** @var array<string|array<string>> associative array of PRS-4 namespaces and corresponding paths. */
     protected static $psr4namespaces = [
-        'MaxMind' => 'lib/maxmind/MaxMind',
-        'GeoIp2' => 'lib/maxmind/GeoIp2',
-        'Sabberworm\\CSS' => 'lib/php-css-parser',
-        'MoodleHQ\\RTLCSS' => 'lib/rtlcss',
-        'ScssPhp\\ScssPhp' => 'lib/scssphp',
-        'OpenSpout' => 'lib/openspout/src',
-        'MatthiasMullie\\Minify' => 'lib/minify/matthiasmullie-minify/src/',
-        'MatthiasMullie\\PathConverter' => 'lib/minify/matthiasmullie-pathconverter/src/',
-        'IMSGlobal\LTI' => 'lib/ltiprovider/src',
-        'Packback\\Lti1p3' => 'lib/lti1p3/src',
-        'Phpml' => 'lib/mlbackend/php/phpml/src/Phpml',
-        'PHPMailer\\PHPMailer' => 'lib/phpmailer/src',
-        'RedeyeVentures\\GeoPattern' => 'lib/geopattern-php/GeoPattern',
-        'Firebase\\JWT' => 'lib/php-jwt/src',
-        'ZipStream' => 'lib/zipstream/src/',
-        'MyCLabs\\Enum' => 'lib/php-enum/src',
-        'PhpXmlRpc' => 'lib/phpxmlrpc',
-        'Psr\\Http\\Client' => 'lib/psr/http-client/src',
-        'Psr\\Http\\Message' => [
+        \MaxMind::class => 'lib/maxmind/MaxMind',
+        \GeoIp2::class => 'lib/maxmind/GeoIp2',
+        \Sabberworm\CSS::class => 'lib/php-css-parser',
+        \MoodleHQ\RTLCSS::class => 'lib/rtlcss',
+        \ScssPhp\ScssPhp::class => 'lib/scssphp',
+        \OpenSpout::class => 'lib/openspout/src',
+        \MatthiasMullie\Minify::class => 'lib/minify/matthiasmullie-minify/src/',
+        \MatthiasMullie\PathConverter::class => 'lib/minify/matthiasmullie-pathconverter/src/',
+        \IMSGlobal\LTI::class => 'lib/ltiprovider/src',
+        \Packback\Lti1p3::class => 'lib/lti1p3/src',
+        \Phpml::class => 'lib/mlbackend/php/phpml/src/Phpml',
+        \PHPMailer\PHPMailer::class => 'lib/phpmailer/src',
+        \RedeyeVentures\GeoPattern::class => 'lib/geopattern-php/GeoPattern',
+        \Firebase\JWT::class => 'lib/php-jwt/src',
+        \ZipStream::class => 'lib/zipstream/src/',
+        \MyCLabs\Enum::class => 'lib/php-enum/src',
+        \PhpXmlRpc::class => 'lib/phpxmlrpc',
+        \Psr\Http\Client::class => 'lib/psr/http-client/src',
+        \Psr\Http\Message::class => [
             'lib/psr/http-message/src',
             'lib/psr/http-factory/src',
         ],
-        'Psr\\EventDispatcher' => 'lib/psr/event-dispatcher/src',
-        'Psr\\Clock' => 'lib/psr/clock/src',
-        'Psr\\Container' => 'lib/psr/container/src',
-        'GuzzleHttp\\Psr7' => 'lib/guzzlehttp/psr7/src',
-        'GuzzleHttp\\Promise' => 'lib/guzzlehttp/promises/src',
-        'GuzzleHttp' => 'lib/guzzlehttp/guzzle/src',
-        'Kevinrob\\GuzzleCache' => 'lib/guzzlehttp/kevinrob/guzzlecache/src',
-        'Aws' => 'lib/aws-sdk/src',
-        'JmesPath' => 'lib/jmespath/src',
-        'Laravel\\SerializableClosure' => 'lib/laravel/serializable-closure/src',
-        'DI' => 'lib/php-di/php-di/src',
-        'Invoker' => 'lib/php-di/invoker/src',
+        \Psr\Http\Server::class => [
+            "lib/psr/http-server-handler/src",
+            "lib/psr/http-server-middleware/src",
+        ],
+        \Psr\EventDispatcher::class => 'lib/psr/event-dispatcher/src',
+        \Psr\Clock::class => 'lib/psr/clock/src',
+        \Psr\Container::class => 'lib/psr/container/src',
+        \Psr\Log::class => "lib/psr/log/src",
+        \Psr\SimpleCache::class => 'lib/psr/simple-cache/src',
+        \GuzzleHttp\Psr7::class => 'lib/guzzlehttp/psr7/src',
+        \GuzzleHttp\Promise::class => 'lib/guzzlehttp/promises/src',
+        \GuzzleHttp::class => 'lib/guzzlehttp/guzzle/src',
+        \Kevinrob\GuzzleCache::class => 'lib/guzzlehttp/kevinrob/guzzlecache/src',
+        \Aws::class => 'lib/aws-sdk/src',
+        \JmesPath::class => 'lib/jmespath/src',
+        \Laravel\SerializableClosure::class => 'lib/laravel/serializable-closure/src',
+        \DI::class => 'lib/php-di/php-di/src',
+        \Complex::class => 'lib/phpspreadsheet/markbaker/classes/src',
+        \Matrix::class => 'lib/phpspreadsheet/markbaker/classes/src',
+        \PhpOffice\PhpSpreadsheet::class => 'lib/phpspreadsheet/phpspreadsheet/src/PhpSpreadsheet',
+        \Invoker::class => 'lib/php-di/invoker/src',
+        \FastRoute::class => 'lib/nikic/fast-route/src',
+        \Slim::class => 'lib/slim/slim/Slim',
     ];
+
+    /**
+     *  An array containing files which are normally in a package's composer/autoload.files section.
+     *
+     * PHP does not provide a mechanism for automatically including the files that methods are in.
+     *
+     * The Composer autoloader includes all files in this section of the composer.json file during the instantiation of the loader.
+     *
+     * @var array<string>
+     */
+    protected static $composerautoloadfiles = [
+        'lib/aws-sdk/src/functions.php',
+        'lib/guzzlehttp/guzzle/src/functions_include.php',
+        'lib/jmespath/src/JmesPath.php',
+        'lib/php-di/php-di/src/functions.php',
+        'lib/ralouphi/getallheaders/src/getallheaders.php',
+        'lib/symfony/deprecation-contracts/function.php',
+    ];
+
+    /**
+     * Register the Moodle class autoloader.
+     */
+    public static function register_autoloader(): void {
+        if (defined('COMPONENT_CLASSLOADER')) {
+            spl_autoload_register(COMPONENT_CLASSLOADER);
+        } else {
+            spl_autoload_register([self::class, 'classloader']);
+        }
+
+        // Load any composer-driven autoload files.
+        // This is intended to mimic the behaviour of the standard Composer Autoloader.
+        foreach (static::$composerautoloadfiles as $file) {
+            $path = dirname(__DIR__, 2) . '/' . $file;
+            if (file_exists($path)) {
+                require_once($path);
+            }
+        }
+    }
 
     /**
      * Class loader for Frankenstyle named classes in standard locations.
@@ -441,9 +490,7 @@ class component {
         $keyclasses = [
             \core\exception\moodle_exception::class,
             \core\output\bootstrap_renderer::class,
-            \core\lang_string::class,
-            \renderable::class,
-            \core\url::class,
+            \core\router::class,
         ];
         foreach ($keyclasses as $classname) {
             if (!array_key_exists($classname, $cache['classmap'])) {

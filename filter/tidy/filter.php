@@ -15,55 +15,14 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * HTML tidy text filter.
+ * File only retained to prevent fatal errors in code that tries to require/include this.
  *
- * This class looks for text including markup and
- * applies tidy's repair function to it.
- * Tidy is a HTML clean and
- * repair utility, which is currently available for PHP 4.3.x and PHP 5 as a
- * PECL extension from http://pecl.php.net/package/tidy, in PHP 5 you need only
- * to compile using the --with-tidy option.
- * If you don't have the tidy extension installed or don't know, you can enable
- * or disable this filter, it just won't have any effect.
- * If you want to know what you can set in $tidyoptions and what their default
- * values are, see http://php.net/manual/en/function.tidy-get-config.php.
- *
- * @package    filter_tidy
- * @subpackage tiny
- * @copyright  2004 Hannes Gassert <hannes at mediagonal dot ch>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @todo MDL-82708 delete this file as part of Moodle 6.0 development.
+ * @deprecated This file is no longer required in Moodle 4.5+.
+ * @package filter_tidy
+ * @copyright Hannes Gassert <hannes@mediagonal.ch>
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class filter_tidy extends moodle_text_filter {
-    #[\Override]
-    public function filter($text, array $options = []) {
-        // Configuration for tidy. Feel free to tune for your needs, e.g. to allow
-        // proprietary markup.
-        $tidyoptions = [
-            'output-xhtml' => true,
-            'show-body-only' => true,
-            'tidy-mark' => false,
-            'drop-proprietary-attributes' => true,
-            'drop-empty-paras' => true,
-            'indent' => true,
-            'quiet' => true,
-        ];
+defined('MOODLE_INTERNAL') || die();
 
-        // Do a quick check using strpos to avoid unnecessary work.
-        if (strpos($text, '<') === false) {
-            return $text;
-        }
-
-
-        // If enabled: run tidy over the entire string.
-        if (function_exists('tidy_repair_string')) {
-            $currentlocale = \core\locale::get_locale();
-            try {
-                $text = tidy_repair_string($text, $tidyoptions, 'utf8');
-            } finally {
-                \core\locale::set_locale(LC_ALL, $currentlocale);
-            }
-        }
-
-        return $text;
-    }
-}
+debugging('This file is no longer required in Moodle 4.5+. Please do not include/require it.', DEBUG_DEVELOPER);

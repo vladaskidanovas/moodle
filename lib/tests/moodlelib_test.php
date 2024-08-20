@@ -2920,18 +2920,41 @@ EOF;
     /**
      * Testing that if the password is not cached, that it does not update
      * the user table and fire event.
+     *
+     * @dataProvider update_internal_user_password_no_cache_provider
+     * @covers ::update_internal_user_password
+     *
+     * @param string $authmethod The authentication method to set for the user.
+     * @param string|null $password The new password to set for the user.
      */
-    public function test_update_internal_user_password_no_cache(): void {
+    public function test_update_internal_user_password_no_cache(
+        string $authmethod,
+        ?string $password,
+    ): void {
         global $DB;
         $this->resetAfterTest();
 
-        $user = $this->getDataGenerator()->create_user(array('auth' => 'cas'));
+        $user = $this->getDataGenerator()->create_user(['auth' => $authmethod]);
         $DB->update_record('user', ['id' => $user->id, 'password' => AUTH_PASSWORD_NOT_CACHED]);
         $user->password = AUTH_PASSWORD_NOT_CACHED;
 
         $sink = $this->redirectEvents();
-        update_internal_user_password($user, 'wonkawonka');
+        update_internal_user_password($user, $password);
         $this->assertEquals(0, $sink->count(), 'User updated event should not fire');
+    }
+
+    /**
+     * The data provider will test the {@see test_update_internal_user_password_no_cache}
+     * for accounts using the authentication method with prevent_local_passwords set to true (no cache).
+     *
+     * @return array
+     */
+    public static function update_internal_user_password_no_cache_provider(): array {
+        return [
+            'Password is not empty' => ['cas', 'wonkawonka'],
+            'Password is an empty string' => ['oauth2', ''],
+            'Password is null' => ['oauth2', null],
+        ];
     }
 
     /**
@@ -5591,6 +5614,47 @@ EOT;
                 true,
                 ['one'],
             ],
+        ];
+    }
+
+    /**
+     * Test case for checking the email greetings in various user notification emails.
+     *
+     * @dataProvider email_greetings_provider
+     * @param string $funcname The name of the function to call for sending the email.
+     * @param mixed $extra Any extra parameter required by the function.
+     * @covers ::send_password_change_info()
+     * @covers ::send_confirmation_email()
+     * @covers ::setnew_password_and_mail()
+     * @covers ::send_password_change_confirmation_email()
+     */
+    public function test_email_greetings($funcname, $extra): void {
+        $this->resetAfterTest();
+
+        $user = $this->getDataGenerator()->create_user();
+
+        $sink = $this->redirectEmails(); // Make sure we are redirecting emails.
+        $funcname($user, $extra);
+        $result = $sink->get_messages();
+        $sink->close();
+        // Test greetings.
+        $this->assertStringContainsString('Hi ' . $user->firstname, quoted_printable_decode($result[0]->body));
+    }
+
+    /**
+     * Data provider for test_email_greetings tests.
+     *
+     * @return array
+     */
+    public static function email_greetings_provider(): array {
+        $extrasendpasswordchangeconfirmationemail = new \stdClass();
+        $extrasendpasswordchangeconfirmationemail->token = '123';
+
+        return [
+            ['send_password_change_info', null],
+            ['send_confirmation_email', null],
+            ['setnew_password_and_mail', false],
+            ['send_password_change_confirmation_email', $extrasendpasswordchangeconfirmationemail],
         ];
     }
 }

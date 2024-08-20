@@ -1073,9 +1073,8 @@ class enrol_self_plugin extends enrol_plugin {
             }
         }
 
-        if (array_key_exists('expirynotify', $data)
-                && ($data['expirynotify'] > 0 || $data['customint2'])
-                && $data['expirythreshold'] < 86400) {
+        // If expirynotify is selected, then ensure the threshold is at least one day.
+        if (isset($data['expirynotify']) && $data['expirynotify'] > 0 && $data['expirythreshold'] < DAYSECS) {
             $errors['expirythreshold'] = get_string('errorthresholdlow', 'core_enrol');
         }
 
@@ -1302,6 +1301,6 @@ class enrol_self_plugin extends enrol_plugin {
 function enrol_self_get_fontawesome_icon_map() {
     return [
         'enrol_self:withkey' => 'fa-key',
-        'enrol_self:withoutkey' => 'fa-sign-in',
+        'enrol_self:withoutkey' => 'fa-solid fa-right-to-bracket',
     ];
 }
