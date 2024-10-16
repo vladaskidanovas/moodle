@@ -119,6 +119,11 @@ class behat_mod_quiz extends behat_question_base {
             case 'manual grading report':
                 return new moodle_url('/mod/quiz/report.php',
                         ['id' => $this->get_cm_by_quiz_name($identifier)->id, 'mode' => 'grading']);
+
+            case 'allocated manual grading report':
+                return new moodle_url('/mod/quiz/report.php',
+                    ['id' => $this->get_cm_by_quiz_name($identifier)->id, 'mode' => 'allocatedgrading']);
+
             case 'attempt view':
                 list($quizname, $username, $attemptno, $pageno) = explode(' > ', $identifier);
                 $pageno = intval($pageno);
