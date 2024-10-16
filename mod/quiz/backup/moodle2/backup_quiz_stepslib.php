@@ -46,6 +46,9 @@ class backup_quiz_activity_structure_step extends backup_questions_activity_stru
         // Define elements for access rule subplugin settings.
         $this->add_subplugin_structure('quizaccess', $quiz, true);
 
+        // Define elements for quiz report subplugin settings.
+        $this->add_subplugin_structure('quiz', $quiz, true);
+
         $quizgradeitems = new backup_nested_element('quiz_grade_items');
 
         $quizgradeitem = new backup_nested_element('quiz_grade_item', ['id'], ['sortorder', 'name']);
@@ -90,6 +93,9 @@ class backup_quiz_activity_structure_step extends backup_questions_activity_stru
 
         // Define elements for access rule subplugin attempt data.
         $this->add_subplugin_structure('quizaccess', $attempt, true);
+
+        // Define elements for quiz report subplugin attempt data.
+        $this->add_subplugin_structure('quiz', $attempt, true);
 
         // Build the tree.
         $quiz->add_child($quizgradeitems);
