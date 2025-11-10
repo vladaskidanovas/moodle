@@ -72,7 +72,14 @@ if ($taskid) {
     $tasks = array_filter(
         core\task\manager::get_adhoc_tasks($classname, $failedonly, $dueonly, true),
         function ($t) use ($now) {
-            return $t->get_fail_delay() || $t->get_next_run_time() <= $now;
+            $scheduledadhoctask = \core\task\manager::get_scheduled_adhoc_task(
+                \core\task\manager::get_canonical_class_name($t)
+            );
+            if (!$scheduledadhoctask) {
+                return $t->get_fail_delay() || $t->get_next_run_time() <= $now;
+            } else {
+                return $t;
+            }
         }
     );
 }

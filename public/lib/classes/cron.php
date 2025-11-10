@@ -16,6 +16,7 @@
 
 namespace core;
 
+use Aws\Panorama\PanoramaClient;
 use coding_exception;
 use core_php_time_limit;
 use moodle_exception;
@@ -285,7 +286,27 @@ class cron {
             }
 
             try {
-                $task = \core\task\manager::get_next_adhoc_task(time(), $checklimits, $classname);
+                $time = time();
+                // If we run tasks for a specific class, and it's a scheduled adhoc task,
+                // we need to get its next scheduled time to get next adhoc task.
+                if (!is_null($classname)) {
+                    $scheduledadhoctask = \core\task\manager::get_scheduled_adhoc_task($classname);
+                    if ($scheduledadhoctask && $scheduledadhoctask->is_enabled()) {
+                        $time = $scheduledadhoctask->get_next_scheduled_time() + 1;
+                    }
+                } else {
+                    // Get the maximum next run time from scheduled ad hoc tasks, or use the current time if there are none.
+                    $scheduledadhoctasks = \core\task\manager::get_all_scheduled_adhoc_tasks();
+                    $timevalues = [$time];
+                    foreach ($scheduledadhoctasks as $satask) {
+                        $scheduledadhoctask = \core\task\manager::get_scheduled_adhoc_task($satask->get_classname());
+                        if ($scheduledadhoctask && $scheduledadhoctask->is_enabled()) {
+                            $timevalues[] = $scheduledadhoctask->get_next_scheduled_time();
+                        }
+                    }
+                    $time = max($timevalues) + 1;
+                }
+                $task = \core\task\manager::get_next_adhoc_task($time, $checklimits, $classname);
             } catch (\Throwable $e) {
                 if ($adhoclock) {
                     // Release the adhoc task runner lock.
@@ -295,6 +316,44 @@ class cron {
             }
 
             if ($task) {
+                // Verify that the scheduled task exists and is enabled.
+                // Compare the task’s maximum valid execution time with the current time.
+                //
+                // Examples:
+                //
+                // '| * | * | * | * | * |'
+                // If the task runs at 9:00, the maximum valid time is NEVER_RUN_TIME,
+                // it will run all tasks until they are done.
+                //
+                // Range type '| 10-20 | * | * | * | * |':
+                // If the task runs at 9:10, the maximum valid time is 9:20.
+                // At 9:21, the task will be rescheduled to run at 10:10.
+                //
+                // Single value '| 10 | * | * | * | * |':
+                // If the task runs at 9:10, the maximum valid time is 9:10.
+                // At 9:11, the task will be rescheduled to run at 10:10.
+                //
+                // Value list '| 10,20,30 | * | * | * | * |':
+                // If the task runs at 9:10, the maximum valid time is 9:10.
+                // At 9:11, the task will be rescheduled to run at 9:20.
+                //
+                // Step value '| */10 | * | * | * | * |':
+                // If the task runs at 9:10, the maximum valid time is 9:10.
+                // At 9:11, the task will be rescheduled to run at 9:20.
+
+                // Round time down to an exact minute.
+                $now = intdiv(time(), 60) * 60;
+                $scheduledadhoctask = \core\task\manager::get_scheduled_adhoc_task(get_class($task));
+                if (
+                    $scheduledadhoctask &&
+                    $scheduledadhoctask->is_enabled() &&
+                    $scheduledadhoctask->get_max_next_scheduled_time($task->get_next_run_time()) < $now
+                ) {
+                    mtrace('Reschedule the next valid time for scheduled adhoc task: ' . get_class($task));
+                    \core\task\manager::reschedule_queued_adhoc_tasks_by_class(get_class($task));
+                    continue;
+                }
+
                 if ($waiting) {
                     mtrace('');
                 }
@@ -341,8 +400,13 @@ class cron {
      */
     public static function run_adhoc_task(int $taskid): void {
         $task = \core\task\manager::get_adhoc_task($taskid);
-        if (!$task->get_fail_delay() && $task->get_next_run_time() > time()) {
-            throw new \moodle_exception('wontrunfuturescheduledtask');
+        $scheduledadhoctask = \core\task\manager::get_scheduled_adhoc_task(
+            \core\task\manager::get_canonical_class_name($task)
+        );
+        if (!$scheduledadhoctask) {
+            if (!$task->get_fail_delay() && $task->get_next_run_time() > time()) {
+                throw new \moodle_exception('wontrunfuturescheduledtask');
+            }
         }
 
         self::run_inner_adhoc_task($task);

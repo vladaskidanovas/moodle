@@ -96,28 +96,28 @@ class manager {
      * @param string $componentname - The name of the component to fetch the tasks for.
      * @param bool $expandr - if true (default) an 'R' value in a time is expanded to an appropriate int.
      *      If false, they are left as 'R'
-     * @return \core\task\scheduled_task[] - List of scheduled tasks for this component.
+     * @return scheduled_task[] | scheduled_adhoc_task[] - List of scheduled tasks for this component.
      */
     public static function load_default_scheduled_tasks_for_component($componentname, $expandr = true) {
         $dir = \core_component::get_component_directory($componentname);
 
         if (!$dir) {
-            return array();
+            return [];
         }
 
         $file = $dir . '/' . CORE_TASK_TASKS_FILENAME;
         if (!file_exists($file)) {
-            return array();
+            return [];
         }
 
         $tasks = null;
         include($file);
 
         if (!isset($tasks)) {
-            return array();
+            return [];
         }
 
-        $scheduledtasks = array();
+        $scheduledtasks = [];
 
         foreach ($tasks as $task) {
             $record = (object) $task;
@@ -133,49 +133,86 @@ class manager {
     }
 
     /**
-     * Update the database to contain a list of scheduled task for a component.
+     * Update the database to contain a list of scheduled and scheduled adhoc tasks for a component.
      * The list of scheduled tasks is taken from @load_scheduled_tasks_for_component.
      * Will throw exceptions for any errors.
      *
      * @param string $componentname - The frankenstyle component name.
+     * @return void
      */
-    public static function reset_scheduled_tasks_for_component($componentname) {
+    public static function reset_scheduled_tasks_for_component($componentname): void {
         global $DB;
+
         $tasks = self::load_default_scheduled_tasks_for_component($componentname);
-        $validtasks = array();
+
+        $validtasks = [];
+        $validadhoctasks = [];
 
         foreach ($tasks as $taskid => $task) {
             $classname = self::get_canonical_class_name($task);
-
-            $validtasks[] = $classname;
-
-            if ($currenttask = self::get_scheduled_task($classname)) {
-                if ($currenttask->is_customised()) {
-                    // If there is an existing task with a custom schedule, do not override it.
-                    continue;
-                }
-
-                // Update the record from the default task data.
-                self::configure_scheduled_task($task);
+            // Check if this its an scheduled adhoc task. Get the adhoc class.
+            if ($isadhoc = $classname === '\core\task\scheduled_adhoc_task') {
+                $classname = self::get_canonical_class_name($task->get_classname());
+                $validadhoctasks[] = $classname;
             } else {
-                // Ensure that the first run follows the schedule.
-                $task->set_next_run_time($task->get_next_scheduled_time());
+                $validtasks[] = $classname;
+            }
 
+            if ($isadhoc) {
+                $currenttask = self::get_scheduled_adhoc_task($classname);
+            } else {
+                $currenttask = self::get_scheduled_task($classname);
+            }
+
+            // If there is an existing task with a custom schedule, do not override it.
+            if ($currenttask && $currenttask->is_customised()) {
+                continue;
+            }
+
+            if ($currenttask) {
+                // Update the record from the default task data.
+                if ($isadhoc) {
+                    self::configure_scheduled_adhoc_task($task);
+                } else {
+                    self::configure_scheduled_task($task);
+                }
+            } else {
                 // Insert the new task in the database.
-                $record = self::record_from_scheduled_task($task);
-                $DB->insert_record('task_scheduled', $record);
+                if ($isadhoc) {
+                    $record = self::record_from_scheduled_adhoc_task($task);
+                    $DB->insert_record('task_scheduled_adhoc', $record);
+                } else {
+                    // Ensure that the first run follows the schedule.
+                    $task->set_next_run_time($task->get_next_scheduled_time());
+                    $record = self::record_from_scheduled_task($task);
+                    $DB->insert_record('task_scheduled', $record);
+                }
             }
         }
 
         // Delete any task that is not defined in the component any more.
+        self::delete_task_records($componentname, 'task_scheduled', $validtasks);
+        self::delete_task_records($componentname, 'task_scheduled_adhoc', $validadhoctasks);
+    }
+
+    /**
+     * Delete scheduled or scheduled adhoc task that is not defined in the component any more.
+     *
+     * @param string $componentname The component name.
+     * @param string $tablename The scheduled task table name.
+     * @param array $validatasks The classname of the tasks that are valid for the component.
+     * @return void
+     */
+    private static function delete_task_records($componentname, $tablename, $validatasks): void {
+        global $DB;
         $sql = "component = :component";
-        $params = array('component' => $componentname);
-        if (!empty($validtasks)) {
-            list($insql, $inparams) = $DB->get_in_or_equal($validtasks, SQL_PARAMS_NAMED, 'param', false);
+        $params = ['component' => $componentname];
+        if (!empty($validatasks)) {
+            [$insql, $inparams] = $DB->get_in_or_equal($validatasks, SQL_PARAMS_NAMED, 'param', false);
             $sql .= ' AND classname ' . $insql;
             $params = array_merge($params, $inparams);
         }
-        $DB->delete_records_select('task_scheduled', $sql, $params);
+        $DB->delete_records_select($tablename, $sql, $params);
     }
 
     /**
@@ -222,8 +259,14 @@ class manager {
         global $DB;
 
         if ($existingrecord = self::get_queued_adhoc_task_record($task)) {
-            // Only update the next run time if it is explicitly set on the task.
-            $nextruntime = $task->get_next_run_time();
+            // Check if the adhoc task has a schedule, if true calculate next schedule time.
+            $scheduledadhoctask = self::get_scheduled_adhoc_task(self::get_canonical_class_name($task));
+            if ($scheduledadhoctask && $scheduledadhoctask->is_enabled()) {
+                $nextruntime = $scheduledadhoctask->get_next_scheduled_time();
+            } else {
+                // Only update the next run time if it is explicitly set on the task.
+                $nextruntime = $task->get_next_run_time();
+            }
             if ($nextruntime && ($existingrecord->nextruntime != $nextruntime)) {
                 $DB->set_field('task_adhoc', 'nextruntime', $nextruntime, ['id' => $existingrecord->id]);
             }
@@ -233,6 +276,27 @@ class manager {
         }
     }
 
+    /**
+     * Reschedule all queued adhoc tasks for a given adhoc task class name.
+     *
+     * @param string $classname
+     * @return void
+     */
+    public static function reschedule_queued_adhoc_tasks_by_class(string $classname): void {
+        $clock = \core\di::get(\core\clock::class);
+
+        // Get all queued adhoc tasks for this scheduled adhoc task.
+        $adhoctasks = self::get_adhoc_tasks($classname, false, true, true);
+        $scheduledadhoctask = self::get_scheduled_adhoc_task($classname);
+
+        foreach ($adhoctasks as $task) {
+            // Check if scheduled task is disabled, if true use ASAP as next run time.
+            if ($scheduledadhoctask && !$scheduledadhoctask->is_enabled()) {
+                $task->set_next_run_time($clock->time() - 1);
+            }
+            self::reschedule_or_queue_adhoc_task($task);
+        }
+    }
     /**
      * Queue an adhoc task to run in the background.
      *
@@ -259,7 +323,13 @@ class manager {
         $record = self::record_from_adhoc_task($task);
         // Schedule it immediately if nextruntime not explicitly set.
         if (!$task->get_next_run_time()) {
-            $record->nextruntime = $clock->time() - 1;
+            // If the task has a schedule and its enabled.
+            $scheduledadhoctask = self::get_scheduled_adhoc_task(self::get_canonical_class_name($task));
+            if ($scheduledadhoctask && $scheduledadhoctask->is_enabled()) {
+                $record->nextruntime = $scheduledadhoctask->get_next_scheduled_time();
+            } else {
+                $record->nextruntime = $clock->time() - 1;
+            }
         }
 
         // Check if the task is allowed to be retried or not.
@@ -302,6 +372,23 @@ class manager {
     }
 
     /**
+     * Change the default configuration for a scheduled adhoc task.
+     * The list of scheduled adhoc tasks is taken from {@see load_scheduled_adhoc_tasks_for_component}.
+     *
+     * @param scheduled_adhoc_task $task - The new scheduled task information to store.
+     * @return boolean - True if the config was saved.
+     */
+    public static function configure_scheduled_adhoc_task(scheduled_adhoc_task $task): bool {
+        global $DB;
+
+        $classname = self::get_canonical_class_name($task->get_classname());
+        $original = $DB->get_record('task_scheduled_adhoc', ['classname' => $classname], 'id', MUST_EXIST);
+        $record = self::record_from_scheduled_adhoc_task($task);
+        $record->id = $original->id;
+        return $DB->update_record('task_scheduled_adhoc', $record);
+    }
+
+    /**
      * Utility method to create a DB record from a scheduled task.
      *
      * @param \core\task\scheduled_task $task
@@ -325,6 +412,26 @@ class manager {
         $record->hostname = $task->get_hostname();
         $record->pid = $task->get_pid();
 
+        return $record;
+    }
+
+    /**
+     * Utility method to create a DB record from a scheduled adhoc task.
+     *
+     * @param scheduled_adhoc_task $task
+     * @return \stdClass
+     */
+    public static function record_from_scheduled_adhoc_task(scheduled_adhoc_task $task): \stdClass {
+        $record = new \stdClass();
+        $record->classname = self::get_canonical_class_name($task->get_classname());
+        $record->component = $task->get_component();
+        $record->minute = $task->get_minute();
+        $record->hour = $task->get_hour();
+        $record->day = $task->get_day();
+        $record->dayofweek = $task->get_day_of_week();
+        $record->month = $task->get_month();
+        $record->disabled = $task->get_disabled();
+        $record->customised = $task->is_customised();
         return $record;
     }
 
@@ -406,7 +513,7 @@ class manager {
      * @param bool $expandr - if true (default) an 'R' value in a time is expanded to an appropriate int.
      *      If false, they are left as 'R'
      * @param bool $override - if true loads overridden settings from config.
-     * @return \core\task\scheduled_task|false
+     * @return scheduled_task | false
      */
     public static function scheduled_task_from_record($record, $expandr = true, $override = true) {
         $classname = self::get_canonical_class_name($record->classname);
@@ -414,8 +521,13 @@ class manager {
             debugging("Failed to load task: " . $classname, DEBUG_DEVELOPER);
             return false;
         }
-        /** @var \core\task\scheduled_task $task */
-        $task = new $classname;
+
+        /** @var \core\task\scheduled_task | adhoc_task $task */
+        $task = new $classname();
+        // Check if the task is subclass of an adhoc task, if so wrap it in a scheduled_adhoc_task bridge class.
+        if (is_subclass_of($task, \core\task\adhoc_task::class)) {
+            $task = new scheduled_adhoc_task($task);
+        }
 
         if ($override) {
             // Update values with those defined in the config, if any are set.
@@ -478,9 +590,31 @@ class manager {
     public static function load_scheduled_tasks_for_component($componentname) {
         global $DB;
 
-        $tasks = array();
+        $tasks = [];
         // We are just reading - so no locks required.
-        $records = $DB->get_records('task_scheduled', array('component' => $componentname), 'classname', '*', IGNORE_MISSING);
+        $records = $DB->get_records('task_scheduled', ['component' => $componentname], 'classname', '*', IGNORE_MISSING);
+        foreach ($records as $record) {
+            $task = self::scheduled_task_from_record($record);
+            // Safety check in case the task in the DB does not match a real class (maybe something was uninstalled).
+            if ($task) {
+                $tasks[] = $task;
+            }
+        }
+
+        return $tasks;
+    }
+
+    /**
+     * Given a component name, will load the list of tasks from the task_scheduled_adhoc table for that component.
+     * Do not execute tasks loaded from this function - they have not been locked.
+     * @param string $componentname - The name of the component to load the tasks for.
+     * @return \core\task\scheduled_adhoc_task[]
+     */
+    public static function load_scheduled_adhoc_tasks_for_component($componentname) {
+        global $DB;
+
+        $tasks = [];
+        $records = $DB->get_records('task_scheduled_adhoc', ['component' => $componentname], 'classname', '*', IGNORE_MISSING);
         foreach ($records as $record) {
             $task = self::scheduled_task_from_record($record);
             // Safety check in case the task in the DB does not match a real class (maybe something was uninstalled).
@@ -504,6 +638,25 @@ class manager {
         $classname = self::get_canonical_class_name($classname);
         // We are just reading - so no locks required.
         $record = $DB->get_record('task_scheduled', array('classname'=>$classname), '*', IGNORE_MISSING);
+        if (!$record) {
+            return false;
+        }
+        return self::scheduled_task_from_record($record);
+    }
+
+    /**
+     * This function load the scheduled adhoc task details for a given classname.
+     *
+     * @param string $classname
+     * @return scheduled_adhoc_task | false
+     */
+    public static function get_scheduled_adhoc_task(string $classname): scheduled_adhoc_task | false {
+        global $DB;
+
+        $classname = self::get_canonical_class_name($classname);
+
+        // We are just reading - so no locks required.
+        $record = $DB->get_record('task_scheduled_adhoc', ['classname' => $classname]);
         if (!$record) {
             return false;
         }
@@ -615,16 +768,46 @@ class manager {
      * @param string $classname
      * @param bool $expandr - if true (default) an 'R' value in a time is expanded to an appropriate int.
      *      If false, they are left as 'R'
-     * @return \core\task\scheduled_task|false
+     * @return scheduled_task | false
      */
     public static function get_default_scheduled_task($classname, $expandr = true) {
         $task = self::get_scheduled_task($classname);
-        $componenttasks = array();
+        return self::get_default_task_by_task_type($task, $expandr);
+    }
+
+    /**
+     * This function load the default scheduled adhoc task details for a given classname.
+     *
+     * @param string $classname The adhoc task classname.
+     * @param bool $expandr - if true (default) an 'R' value in a time is expanded to an appropriate int.
+     *      If false, they are left as 'R'
+     * @return scheduled_adhoc_task | false
+     */
+    public static function get_default_scheduled_adhoc_task($classname, $expandr = true): scheduled_adhoc_task | false {
+        $task = self::get_scheduled_adhoc_task($classname);
+        return self::get_default_task_by_task_type($task, $expandr);
+    }
+
+    /**
+     * This function load the default scheduled tasks for a given component.
+     *
+     * @param scheduled_task|scheduled_adhoc_task $task
+     * @param bool $expandr - if true (default) an 'R' value in a time is expanded to an appropriate int.
+     *      If false, they are left as 'R'
+     * @return scheduled_task|scheduled_adhoc_task | false
+     */
+    private static function get_default_task_by_task_type(
+        scheduled_task|scheduled_adhoc_task $task,
+        bool $expandr
+    ): scheduled_task|scheduled_adhoc_task | false {
+        $componenttasks = [];
 
         // Safety check in case no task was found for the given classname.
         if ($task) {
             $componenttasks = self::load_default_scheduled_tasks_for_component(
-                    $task->get_component(), $expandr);
+                $task->get_component(),
+                $expandr
+            );
         }
 
         foreach ($componenttasks as $componenttask) {
@@ -661,6 +844,28 @@ class manager {
             }
 
             $tasks[] = $task;
+        }
+
+        return $tasks;
+    }
+
+    /**
+     * This function will return a list of all the scheduled adhoc tasks that exist in the database.
+     *
+     * @return \core\task\scheduled_adhoc_task[]
+     */
+    public static function get_all_scheduled_adhoc_tasks() {
+        global $DB;
+
+        $records = $DB->get_records('task_scheduled_adhoc', null, 'component, classname', '*', IGNORE_MISSING);
+        $tasks = [];
+
+        foreach ($records as $record) {
+            $task = self::scheduled_task_from_record($record);
+            // Safety check in case the task in the DB does not match a real class (maybe something was uninstalled).
+            if ($task) {
+                $tasks[] = $task;
+            }
         }
 
         return $tasks;
@@ -841,6 +1046,20 @@ class manager {
                     $lock->release();
                     unset(self::$miniqueue[$taskid]);
                     continue;
+                }
+
+                // Release the lock if the scheduled adhoc task is overdue the time.
+                $scheduledadhoctask = self::get_scheduled_adhoc_task(
+                    self::get_canonical_class_name($record->classname)
+                );
+                $now = intdiv(time(), 60) * 60;
+                if (
+                    $scheduledadhoctask &&
+                    $scheduledadhoctask->is_enabled() &&
+                    $scheduledadhoctask->get_max_next_scheduled_time((int)$record->nextruntime) < $now
+                ) {
+                    $lock->release();
+                    unset(self::$miniqueue[$taskid]);
                 }
 
                 // Safety check in case the task in the DB does not match a real class (maybe something was uninstalled).

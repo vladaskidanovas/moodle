@@ -1618,5 +1618,45 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2025121200.01);
     }
 
+    if ($oldversion < 2025121900.01) {
+        // Define task_adhoc_scheduled table.
+        $table = new xmldb_table('task_scheduled_adhoc');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $table->add_field('component', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null, 'id');
+        $table->add_field('classname', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null, 'component');
+        $table->add_field('minute', XMLDB_TYPE_CHAR, '200', null, XMLDB_NOTNULL, null, null, 'classname');
+        $table->add_field('hour', XMLDB_TYPE_CHAR, '70', null, XMLDB_NOTNULL, null, null, 'minute');
+        $table->add_field('day', XMLDB_TYPE_CHAR, '90', null, XMLDB_NOTNULL, null, null, 'hour');
+        $table->add_field('month', XMLDB_TYPE_CHAR, '30', null, XMLDB_NOTNULL, null, null, 'day');
+        $table->add_field('dayofweek', XMLDB_TYPE_CHAR, '25', null, XMLDB_NOTNULL, null, null, 'month');
+        $table->add_field('customised', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, 0, 'dayofweek');
+        $table->add_field('disabled', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, 0, 'customised');
+
+        // Add key.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for communication.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Scan all adhoc tasks.
+        $plugintypes = core_component::get_plugin_types();
+        foreach ($plugintypes as $type => $location) {
+            $plugs = core_component::get_plugin_list($type);
+            foreach ($plugs as $plug => $fullplug) {
+                $component = clean_param($type . '_' . $plug, PARAM_COMPONENT);
+                // Check plugin dir is valid name.
+                if (empty($component)) {
+                    continue;
+                }
+                \core\task\manager::reset_scheduled_tasks_for_component($component);
+            }
+        }
+        // Create a scheduled task which would check new adhoc tasks that are not exist in the task_adhoc_tasks table.
+        upgrade_main_savepoint(true, 2025121900.01);
+    }
+
     return true;
 }
